@@ -1,12 +1,10 @@
 const express = require('express');
-const xmlReader = require('xml-reader');
-const axios = require('axios').default;
 const fileUpload = require('express-fileupload');
 const app = express();
 
 // Starts up the server
-app.listen(process.env.PORT || 2000, (port) => {
-    console.log("Server started");
+app.listen(process.env.PORT || 2000, function onStartUp() {
+    console.log("Server started")
 });
 
 app.use(fileUpload({ createParentPath: true }));
