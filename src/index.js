@@ -12,5 +12,4 @@ app.use(fileUpload({ createParentPath: true }));
 // For hosting static resources and pages
 app.use(express.static('public'));
 
-
 app.post('/upload', require("./controller/upload"));

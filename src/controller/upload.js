@@ -11,12 +11,11 @@ const xmlReader = require('xml-reader');
                 message: 'No files uploaded'
             });
         } else {
-            console.log("Found an uploaded file");
+            console.log("Starting to process the uploaded file!");
             const file = req.files.file;
             const titles = await extractArticleTitles(file.data.toString());
             const promises = titles.map(getArticleId);
             const results = await Promise.all(promises);
-        
             res.send("Done Processing: " + JSON.stringify(results));
         }
     } catch(error) {
