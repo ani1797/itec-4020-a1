@@ -21,7 +21,7 @@ const xmlReader = require('xml-reader');
     } catch(error) {
         console.log(error);
         res.json({
-            message: 'There was an issue processing the request'
+            message: 'There was an issue processing the request.'
         });
     }
 };
