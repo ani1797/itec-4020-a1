@@ -12,6 +12,7 @@ const xmlReader = require('xml-reader');
             });
         } else {
             console.log("Starting to process the uploaded file!");
+            // File was recieved
             const file = req.files.file;
             const titles = await extractArticleTitles(file.data.toString());
             const promises = titles.map(getArticleId);

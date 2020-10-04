@@ -13,7 +13,8 @@ async function getArticleId(articleName) {
             db: 'pubmed', 
             term: articleName,
             api_key: '2befe853f3d36c4bf25bf568d42a31db9609',
-            tool: 'ITEC_4010_ASSIGNMENT'
+            tool: 'ITEC_4010_ASSIGNMENT',
+            field: 'Title'
         }
     })
     .then(res => readXmlResponse(res.data))
@@ -40,7 +41,7 @@ function readXmlResponse(xml) {
 function  createNewArticle(res, title) {
     const count = res.length != 0 ? res.map(r => r['children'][0].value).length : 0;
     const ids = res.length != 0 ? res.map(r => r['children'][0].value).join(",") : null;
-    console.log(`Title: '${title}', Has resulted in ${count} PMID's, List: ${ids}`);
+    if (count != 1) console.log(`Title: '${title}', Has resulted in ${count} PMID's, List: ${ids}`);
     return {
         title, id: res.length != 0 ? res.map(r => r['children'][0].value).join(",") : null
     };
