@@ -3,13 +3,15 @@ const fileUpload = require('express-fileupload');
 const app = express();
 
 // Starts up the server
-app.listen(process.env.PORT || 2000, function onStartUp() {
+app.listen(process.env.PORT || 2000, function onStartUp() 
+{
     console.log("Server started")
-});
+}
+);
 
-app.use(fileUpload({ createParentPath: true }));
+app.use( fileUpload({ createParentPath: true }) );
 
 // For hosting static resources and pages
-app.use(express.static('public'));
+app.use( express.static('public') );
 
-app.post('/upload', require("./controller/upload"));
+app.post( '/upload', require("./controller/upload") );
