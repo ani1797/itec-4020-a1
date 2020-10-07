@@ -3,22 +3,23 @@ const Bottleneck = require('bottleneck');
 
 const limiter = new Bottleneck({
     minTime: 100,
-    maxConcurrent: 3
+    maxConcurrent: 2
 })
 
-async function getArticleId(articleName) {
+async function getArticleId(article) {
     const endpoint = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`;
+    const term = article.title + ' ' + (article.volume != null ? `${article.volume} [volume]`: '') + ' ' + (article.issue != null ? `${article.issue} [issue]`: '');
     return require("axios").default.get(endpoint, {
         params: {
             db: 'pubmed', 
-            term: articleName,
+            term: term,
             api_key: '2befe853f3d36c4bf25bf568d42a31db9609',
             tool: 'ITEC_4010_ASSIGNMENT',
             field: 'Title'
         }
     })
     .then(res => readXmlResponse(res.data))
-    .then(res => createNewArticle(res, articleName))
+    .then(res => createNewArticle(res, article.title))
     .catch(error => {
         console.error("There was an issue making an request", error);
     });
