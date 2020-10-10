@@ -4,20 +4,19 @@ const axios = require("axios").default;
 
 const limiter = new Bottleneck({
     minTime: 100,
-    maxConcurrent: 2
+    maxConcurrent: 3
 })
 
 async function getArticleId({title, volume, issue, initial, lastName, issn}) {
-    
     return getArticleByTitle(title)
         .catch(err => getArticleByJournal(title, volume, issue))
         .catch(err => getArticleByAuthor(title, lastName, initial))
         .catch(err => getArticleByISSN(title,issn))
+        .catch(err => getArticleByVolueAuthorandIssue(title, volume, issue, lastName, initial))
         .catch(err => getArticleByVolueISSNandIssue(title, volume, issue, issn))
         .catch(err => getArticleByAll(title, volume, issue,lastName, initial))
         .then(res => ({  title, ...res}))
         .catch(error => {
-            console.log(error);
             console.log(`!!!! ${title} !!!!!`);
         });
 }
@@ -29,7 +28,7 @@ function getArticleByTitle(title) {
             charas.forEach(chr => {
                 title = title.replace(chr, '');
             })
-            console.log("Removed escaped characters " + title);
+            // console.log("Removed escaped characters " + title);
             return callAPI(title);
         }
         throw err;
@@ -45,6 +44,10 @@ function getArticleByVolueISSNandIssue(title, vol, issue, issn) {
     return callAPI( `${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str(issn, 'Issn')}`);
 }
 
+function getArticleByVolueAuthorandIssue(title, vol, issue, lastName, initial) {
+    return callAPI( `${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str([lastName, initial].filter(n => n != null).join(' ') , 'Author')}`);
+}
+
 function getArticleByJournal(title, vol, issue) {
     return callAPI(`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')}`).catch(err => {
         if (issue.contains('Pt')) return callAPI(`${title} ${str(vol, 'Volume')} ${str(issue.split()[0], 'Issue')}`);
@@ -53,7 +56,7 @@ function getArticleByJournal(title, vol, issue) {
 }
 
 function getArticleByAuthor(title, lastName, initial) {
-    return callAPI(`${title} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`);
+    return callAPI(`${title} ${str([lastName, initial].filter(n => n != null).join(' ') , 'Author')}`);
 }
 
 function getArticleByAll(title, vol, issue,  lastName, initial) {
@@ -70,7 +73,7 @@ function str(v, tag) {
 
 
 const callAPI = term => {
-    console.log("Calling API with query: ", term);
+    // console.log("Calling API with query: ", term);
     const endpoint = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`;
     return axios.get(endpoint, {
         params:  {
@@ -88,6 +91,12 @@ const callAPI = term => {
             throw new Error(`Too many or no results: ${count}`);
         }
         return {count: count, id: esearch['idlist'].join('')};
+    }).catch(reason => {
+        if (reason.response.status == 429) {
+            return callAPI(term);
+        } else {
+            throw reason;
+        }
     });
 };
 

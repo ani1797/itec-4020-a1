@@ -1,7 +1,6 @@
 const { getArticleId } = require('../vendor/pubmed');
 const xmlReader = require('xml-reader');
 const fs = require('fs');
-const fileLocation = require('path');
 
 async function handler(req, res) {
     try {
@@ -16,23 +15,23 @@ async function handler(req, res) {
             // File was recieved
             const file = req.files.file;
             const articles = await extractArticleTitles(file.data.toString());
-            res.send(articles);
+            res.send(articles.map(art => art.title));
             const results = [];
             console.time("Batch Processing")
-            const btchs =  batches(articles.map(getArticleId), 10);
+            const batchSize = 20;
+            const btchs =  batches(articles.map(getArticleId), batchSize);
             for (var i = 0; i< btchs.length; i++) {
-                console.log(`\n\n============================  ${i} of ${btchs.length} =================================`)
-                const rr = await Promise.all(btchs[i]);
-                console.log(`--------------- Finished batch execution: ${i}: ${rr.filter(r => r != null).length} success  ------------\n\n`)
-                results.push(...rr);
+                console.time(`==== ${i+1} of ${btchs.length} ====`);
+                const rr = (await Promise.all(btchs[i])).filter(r => r != null);
+                console.log(`---- Batch ${i+1}: ${rr.length} of ${batchSize} ------------\n\n`);
+                console.timeEnd(`==== ${i+1} of ${btchs.length} ====`);
+                results.push(...rr.map(item => `<PubmedArticle><PMID>${item.id}</PMID><ArticleTitle>${item.title}</ArticleTitle></PubmedArticle>`));
             }
             console.timeEnd("Batch Processing");
-
-            const xmlresults = writeXml(results);
-            fs.writeFile('group_unknown_result.xml',xmlresults, function(err){
+            fs.writeFile('group_unknown_result.xml', `<PubmedArticleSet>${results.join('\n')}</PubmedArticleSet>`, function(err){
                 if (err) return console.log(err);
                 else console.log('File written successfully!');
-            })
+            });
         }
     } catch (error) {
         console.log(error);
@@ -75,11 +74,6 @@ async function extractArticleTitles(xml) {
         reader.parse(xml);
     });
 }
-
-function writeXml(array) {
-    var body = array.map(item => `\n <PubmedArticle>\n      <PMID>${item.id}</PMID>\n      <ArticleTitle>${item.title}</ArticleTitle>\n </PubmedArticle>`).join('');
-    return `<PubmedArticleSet>${body}\n</PubmedArticleSet>`
-  }
 
 function batches(array, count) {
     return array.reduce((groups, d) => {
