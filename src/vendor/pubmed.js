@@ -11,18 +11,26 @@ async function getArticleId(article) {
     return getArticleByTitle(article.title)
         .catch(err => getArticleByJournal(article.title, article.volume, article.issue))
         .catch(err => getArticleByAuthor(article.title, article.lastName, article.initials))
+        .catch(err => getArticleByISSN(article.title, article.issn))
+        .catch(err => callAPI({ term: (`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str(issn, 'Issn')}`)}))
         .catch(err => getArticleByAll(article.title, article.volume, article.issue, article.lastName, article.initial))
-        .then(res => ({ title: article.title, ...res}));
+        .then(res => {
+            console.log(`Retrieved results for: ${article.title}`)
+            return  ({ title: article.title, ...res});
+        })
+        .catch(error => {
+            console.log(`!!!! ${article.title} !!!!!`);
+        });
 }
 
 function getArticleByTitle(title) {
-    return callAPI({ term: title, field: 'Title' });
+    return callAPI({ term: (title), field: 'Title' });
 }
 
 function getArticleByJournal(title, vol, issue) {
     if (vol == null || issue == null) return Promise.reject("No volume or issue to search by!");
     return callAPI({
-        term: `${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')}`,
+        term: (`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')}`),
         field: 'Title'
     });
 }
@@ -30,14 +38,22 @@ function getArticleByJournal(title, vol, issue) {
 function getArticleByAuthor(title, lastName, initial) {
     if (lastName == null || initial == null) return Promise.reject("No author to search by");
     return callAPI({
-        term: `${title} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`,
+        term: (`${title} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`),
         field: 'Title'
     });
 }
 
 function getArticleByAll(title, vol, issue,  lastName, initial) {
     return callAPI({
-        term: `${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`,
+        term: (`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`),
+        field: 'Title'
+    });
+}
+
+
+function getArticleByISSN(title, issn) {
+    return callAPI({
+        term: (`${title} ${str(issn, 'ISSN')}`),
         field: 'Title'
     });
 }
@@ -54,14 +70,16 @@ function callAPI(params) {
         retmode: 'json',
         ...params 
     };
-    console.log("Calling API with query: ", params);
+    console.log("Calling API with query: ", params['term']);
     const endpoint = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`;
     return axios.get(endpoint, {
         params: query
     }).then(res => {
         const esearch = res.data['esearchresult'];
         const count = esearch['count'];
-        if (count != 1) throw new Error(`Too many or no results: ${count}`);
+        if (count != 1) {
+            throw new Error(`Too many or no results: ${count}`);
+        }
         return {count: count, id: esearch['idlist'].join('')};
     });
 }
