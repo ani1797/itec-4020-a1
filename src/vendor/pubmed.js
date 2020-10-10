@@ -7,73 +7,80 @@ const limiter = new Bottleneck({
     maxConcurrent: 2
 })
 
-async function getArticleId(article) {
-    return getArticleByTitle(article.title)
-        .catch(err => getArticleByJournal(article.title, article.volume, article.issue))
-        .catch(err => getArticleByAuthor(article.title, article.lastName, article.initials))
-        .catch(err => getArticleByISSN(article.title, article.issn))
-        .catch(err => callAPI({ term: (`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str(issn, 'Issn')}`)}))
-        .catch(err => getArticleByAll(article.title, article.volume, article.issue, article.lastName, article.initial))
-        .then(res => {
-            console.log(`Retrieved results for: ${article.title}`)
-            return  ({ title: article.title, ...res});
-        })
+async function getArticleId({title, volume, issue, initial, lastName, issn}) {
+    
+    return getArticleByTitle(title)
+        .catch(err => getArticleByJournal(title, volume, issue))
+        .catch(err => getArticleByAuthor(title, lastName, initial))
+        .catch(err => getArticleByISSN(title,issn))
+        .catch(err => getArticleByVolueISSNandIssue(title, volume, issue, issn))
+        .catch(err => getArticleByAll(title, volume, issue,lastName, initial))
+        .then(res => ({  title, ...res}))
         .catch(error => {
-            console.log(`!!!! ${article.title} !!!!!`);
+            console.log(error);
+            console.log(`!!!! ${title} !!!!!`);
         });
 }
 
 function getArticleByTitle(title) {
-    return callAPI({ term: (title), field: 'Title' });
+    return callAPI(title).catch(err => {
+        const charas = ['[', ']', '(', ')', '\"', "\\", "\/"]
+        if (hasSpecialCharacters(title, charas)) {
+            charas.forEach(chr => {
+                title = title.replace(chr, '');
+            })
+            console.log("Removed escaped characters " + title);
+            return callAPI(title);
+        }
+        throw err;
+    });
+}
+
+
+function hasSpecialCharacters(title, charas) {
+    return charas.find(chr => title.indexOf(chr) !== -1);
+}
+
+function getArticleByVolueISSNandIssue(title, vol, issue, issn) {
+    return callAPI( `${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str(issn, 'Issn')}`);
 }
 
 function getArticleByJournal(title, vol, issue) {
-    if (vol == null || issue == null) return Promise.reject("No volume or issue to search by!");
-    return callAPI({
-        term: (`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')}`),
-        field: 'Title'
+    return callAPI(`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')}`).catch(err => {
+        if (issue.contains('Pt')) return callAPI(`${title} ${str(vol, 'Volume')} ${str(issue.split()[0], 'Issue')}`);
+        throw err;
     });
 }
 
 function getArticleByAuthor(title, lastName, initial) {
-    if (lastName == null || initial == null) return Promise.reject("No author to search by");
-    return callAPI({
-        term: (`${title} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`),
-        field: 'Title'
-    });
+    return callAPI(`${title} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`);
 }
 
 function getArticleByAll(title, vol, issue,  lastName, initial) {
-    return callAPI({
-        term: (`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`),
-        field: 'Title'
-    });
+    return callAPI(`${title} ${str(vol, 'Volume')} ${str(issue, 'Issue')} ${str( [lastName, initial].filter(n => n != null).join(' ') , 'Author')}`);
 }
 
-
 function getArticleByISSN(title, issn) {
-    return callAPI({
-        term: (`${title} ${str(issn, 'ISSN')}`),
-        field: 'Title'
-    });
+    return callAPI(`${title} ${str(issn, 'ISSN')}`);
 }
 
 function str(v, tag) {
     return v != null ? `${v} [${tag}]` : '';
 }
 
-function callAPI(params) {
-    const query = {
-        db: 'pubmed',
-        api_key: '2befe853f3d36c4bf25bf568d42a31db9609',
-        tool: 'ITEC_4010_ASSIGNMENT',
-        retmode: 'json',
-        ...params 
-    };
-    console.log("Calling API with query: ", params['term']);
+
+const callAPI = term => {
+    console.log("Calling API with query: ", term);
     const endpoint = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi`;
     return axios.get(endpoint, {
-        params: query
+        params:  {
+            db: 'pubmed',
+            api_key: '2befe853f3d36c4bf25bf568d42a31db9609',
+            tool: 'ITEC_4010_ASSIGNMENT',
+            retmode: 'json',
+            field: 'Title',
+            term
+        }
     }).then(res => {
         const esearch = res.data['esearchresult'];
         const count = esearch['count'];
@@ -82,8 +89,8 @@ function callAPI(params) {
         }
         return {count: count, id: esearch['idlist'].join('')};
     });
-}
+};
 
 module.exports = {
-    getArticleId: limiter.wrap(getArticleId)
+    getArticleId:  limiter.wrap(getArticleId)
 };
