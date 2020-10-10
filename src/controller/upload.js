@@ -2,7 +2,7 @@ const { getArticleId } = require('../vendor/pubmed');
 const XMLWriter = require('xml-writer');
 const xmlReader = require('xml-reader');
 
- async function handler(req, res) {
+async function handler(req, res) {
     try {
         console.log("Recieved a request to process a file");
         if (!req.files) {
@@ -14,10 +14,10 @@ const xmlReader = require('xml-reader');
             console.log("Starting to process the uploaded file!");
             // File was recieved
             const file = req.files.file;
-            const titles = await extractArticleTitles(file.data.toString());
-            const promises = titles.map(getArticleId);
-            const results = await Promise.all(promises);
-            res.send("Done Processing: " + JSON.stringify(results));
+            const articles = await extractArticleTitles(file.data.toString());
+            const promises = articles.map(getArticleId);
+            const results = await (await Promise.all(promises)).filter(res => res != null);
+            res.send(results);
         }
     } catch(error) {
         console.log(error);
@@ -34,10 +34,14 @@ async function extractArticleTitles(xml) {
         reader.on('tag:Article', article => {
             const title = article.children.find(child => child.name === 'ArticleTitle');
             const issue = ifPresent(article.children.find(child => child.name === 'Journal'), c => c.children.find(child => child.name === 'JournalIssue'));
+            const authorList = article.children.find(child => child.name === 'AuthorList');
+            const firstAuthorName = authorList.children[0];
             const art = {
                 title: title.children[0].value,
                 volume: ifPresent(issue.children.find(child => child.name === 'Volume'), c => c.children.length >= 1 ? c.children[0].value: null),
-                issue: ifPresent(issue.children.find(child => child.name === 'Issue'), c => c.children.length >= 1 ? c.children[0].value: null)
+                issue: ifPresent(issue.children.find(child => child.name === 'Issue'), c => c.children.length >= 1 ? c.children[0].value: null),
+                lastName: ifPresent(firstAuthorName.children.find(child => child.name === 'LastName'), c => c.children.length >= 1 ? c.children[0].value: null),
+                initial: ifPresent(firstAuthorName.children.find(child => child.name === 'Initials'), c => c.children.length >= 1 ? c.children[0].value: null)
             };
             arr.push(art);
         });

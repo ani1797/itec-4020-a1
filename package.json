@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node .",
+    "dev": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -16,5 +17,8 @@
     "express-fileupload": "^1.2.0",
     "xml-reader": "^2.4.3",
     "xml-writer": "^1.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
   }
 }
