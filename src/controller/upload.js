@@ -28,7 +28,7 @@ async function handler(req, res) {
                 results.push(...rr.map(item => `<PubmedArticle><PMID>${item.id}</PMID><ArticleTitle>${item.title}</ArticleTitle></PubmedArticle>`));
             }
             console.timeEnd("Batch Processing");
-            fs.writeFile('group_unknown_result.xml', `<PubmedArticleSet>${results.join('\n')}</PubmedArticleSet>`, function(err){
+            fs.writeFile('group_7_result.xml', `<PubmedArticleSet>${results.join('\n')}</PubmedArticleSet>`, function(err){
                 if (err) return console.log(err);
                 else console.log('File written successfully!');
             });
