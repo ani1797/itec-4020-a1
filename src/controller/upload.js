@@ -25,7 +25,7 @@ async function handler(req, res) {
                 const rr = (await Promise.all(btchs[i])).filter(r => r != null);
                 console.log(`---- Batch ${i+1}: ${rr.length} of ${batchSize} ------------\n\n`);
                 console.timeEnd(`==== ${i+1} of ${btchs.length} ====`);
-                results.push(...rr.map(item => `<PubmedArticle><PMID>${item.id}</PMID><ArticleTitle>${item.title}</ArticleTitle></PubmedArticle>`));
+                results.push(...rr.map(item => `\n\t<PubmedArticle>\n\t\t<PMID>${item.id}</PMID>\n\t\t<ArticleTitle>${item.title}</ArticleTitle>\n\t</PubmedArticle>`));
             }
             console.timeEnd("Batch Processing");
             fs.writeFile('group_7_result.xml', `<PubmedArticleSet>${results.join('\n')}</PubmedArticleSet>`, function(err){
