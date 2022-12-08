@@ -13,7 +13,7 @@
   "dependencies": {
     "axios": "^0.20.0",
     "bottleneck": "^2.19.5",
-    "express": "^4.17.1",
+    "express": "^4.18.2",
     "express-fileupload": "^1.2.0",
     "xml-reader": "^2.4.3"
   },
